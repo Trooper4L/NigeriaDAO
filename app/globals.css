@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(0, 239, 139, 0.12) 0%, transparent 35%),
+    radial-gradient(circle at 90% 16%, rgba(0, 135, 81, 0.16) 0%, transparent 30%),
+    linear-gradient(145deg, #07090c 0%, #0b0e11 45%, #0e141d 100%);
+  color: #f0f6ff;
+}
+
+.grid-noise {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
