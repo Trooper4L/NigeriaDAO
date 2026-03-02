@@ -40,17 +40,18 @@ Build a secure, mobile-first civic portal that bridges:
 
 ## Tech Stack
 
-- **Framework:** Next.js (App Router)
+- **Framework:** Next.js 15 (App Router)
 - **Styling:** Tailwind CSS
 - **UI System:** Chakra UI
 - **Accessibility primitives:** Radix UI (Accordion)
 - **Icons:** Lucide
 - **Typography:** IBM Plex Sans + Space Grotesk
 
-Planned integrations:
-- Flow FCL for wallet and transaction interactions
-- Filecoin/IPFS providers (Web3.Storage / Lighthouse / Estuary)
-- Firebase Auth + Firestore
+**Integrated Services:**
+- ✅ **Flow FCL** - Blockchain wallet and transaction interactions
+- ✅ **Lighthouse SDK** - IPFS/Filecoin decentralized storage
+- ✅ **Firebase** - Anonymous authentication + Firestore database
+- ✅ **Cadence Smart Contracts** - On-chain governance and voting
 
 ## Design System
 
@@ -64,6 +65,10 @@ Planned integrations:
 app/
   layout.tsx
   page.tsx
+  opinions/page.tsx
+  proposals/page.tsx
+  analytics/page.tsx
+  dao/page.tsx
   globals.css
 components/
   layout/
@@ -72,8 +77,45 @@ components/
   parliament/
     proposal-card.tsx
     proposal-feed.tsx
+  opinions/
+    opinion-form.tsx
+    opinion-card.tsx
+  proposals/
+    create-proposal-form.tsx
+  voting/
+    vote-button.tsx
+  analytics/
+    analytics-dashboard.tsx
+  dao/
+    dao-token-display.tsx
+  wallet/
+    flow-wallet-connect.tsx
   providers/
     chakra-provider.tsx
+lib/
+  config/
+    firebase.ts
+    flow.ts
+  services/
+    auth.ts
+    lighthouse.ts
+    flow.ts
+    opinion.ts
+    proposal.ts
+    analytics.ts
+    dao.ts
+  hooks/
+    useAuth.ts
+    useFlow.ts
+  types/
+    index.ts
+cadence/
+  contracts/
+    OpinionRegistry.cdc
+    ProposalRegistry.cdc
+    VotingContract.cdc
+    NDAOToken.cdc
+    CivicNFT.cdc
 data/
   proposals.ts
 ```
@@ -86,7 +128,22 @@ data/
 npm install
 ```
 
-### 2. Run development server
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env.local` and fill in your credentials:
+
+```bash
+cp .env.example .env.local
+```
+
+Required credentials:
+- **Firebase** - Create project at [Firebase Console](https://console.firebase.google.com/)
+- **Lighthouse** - Get API key at [Lighthouse Storage](https://files.lighthouse.storage/)
+- **Flow** - Testnet configuration (pre-configured)
+
+See [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) for detailed setup instructions.
+
+### 3. Run development server
 
 ```bash
 npm run dev
@@ -94,7 +151,7 @@ npm run dev
 
 Open http://localhost:3000
 
-### 3. Build for production
+### 4. Build for production
 
 ```bash
 npm run build
@@ -103,10 +160,33 @@ npm run start
 
 ## Product Roadmap
 
-- **Phase 1 (MVP):** opinion posting, Flow proof storage, IPFS/Filecoin storage
-- **Phase 2:** voting system, civic proposals, social media syndication
-- **Phase 3:** AI moderation and civic analytics
-- **Phase 4:** full DAO governance launch
+- **Phase 1 (✅ Completed):** 
+  - ✅ Opinion posting with IPFS/Filecoin storage
+  - ✅ Flow blockchain integration
+  - ✅ Anonymous authentication
+  - ✅ Civic proposals system
+  - ✅ Voting system with smart contracts
+  - ✅ Analytics dashboard
+  - ✅ DAO governance tokens (NDAO)
+  - ✅ Civic NFT badges
+
+- **Phase 2 (In Progress):**
+  - 🔄 AI moderation agent
+  - 🔄 Social media syndication (X, Facebook, Telegram, WhatsApp)
+  - 🔄 RSS feed generation
+  - 🔄 Advanced regional analytics
+
+- **Phase 3 (Planned):**
+  - 📋 Mobile app (React Native)
+  - 📋 Multi-language support (Yoruba, Igbo, Hausa)
+  - 📋 Advanced DAO treasury management
+  - 📋 Proposal execution framework
+
+- **Phase 4 (Future):**
+  - 📋 Mainnet deployment
+  - 📋 Government API integrations
+  - 📋 NGO partnership dashboard
+  - 📋 Verified identity tier (optional)
 
 ## Non-Functional Goals
 
