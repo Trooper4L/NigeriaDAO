@@ -2,7 +2,7 @@ export type Proposal = {
   id: string;
   title: string;
   summary: string;
-  status: "Draft" | "Public Discussion" | "Voting";
+  status: "Draft" | "Public Discussion" | "Voting" | "Accepted" | "Rejected";
   support: number;
   against: number;
   comments: number;
