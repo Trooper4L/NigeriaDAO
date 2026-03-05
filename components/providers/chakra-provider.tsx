@@ -8,17 +8,45 @@ const theme = extendTheme({
     initialColorMode: "dark",
     useSystemColorMode: false
   },
+  fonts: {
+    heading: "var(--font-display)",
+    body: "var(--font-body)"
+  },
+  semanticTokens: {
+    colors: {
+      "bg.canvas": "#06090D",
+      "bg.panel": "#0E1520",
+      "bg.panelAlt": "#141F2D",
+      "text.primary": "#F4F8FF",
+      "text.muted": "#A9BDD0",
+      "accent.primary": "#008751",
+      "accent.secondary": "#00EF8B"
+    }
+  },
   styles: {
     global: {
-      body: {
-        bg: "deepSpace.900",
-        color: "gray.100"
+      "html, body": {
+        bg: "bg.canvas",
+        color: "text.primary"
+      },
+      "::selection": {
+        bg: "accent.primary",
+        color: "white"
       }
     }
   },
   colors: {
-    brand: {
-      500: "#008751"
+    nigeria: {
+      50: "#E5F9EF",
+      100: "#B6EFD2",
+      200: "#88E4B6",
+      300: "#5BD99A",
+      400: "#2DCE7E",
+      500: "#008751",
+      600: "#006C42",
+      700: "#005234",
+      800: "#003825",
+      900: "#001F14"
     },
     flow: {
       500: "#00EF8B"
