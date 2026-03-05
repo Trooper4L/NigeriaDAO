@@ -12,7 +12,6 @@
     "@chakra-ui/react": "^2.10.3",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@radix-ui/react-accordion": "^1.2.2",
     "framer-motion": "^11.16.4",
     "lucide-react": "^0.511.0",
     "next": "15.2.4",

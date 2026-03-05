@@ -1,34 +1,61 @@
 "use client";
 
-import { BarChart3, FileText, Home, Vote } from "lucide-react";
+import NextLink from "next/link";
+import { usePathname } from "next/navigation";
+import { BarChart3, FileText, Home, ShieldCheck, Vote } from "lucide-react";
+import { Box, HStack, Icon, Text, VStack } from "@chakra-ui/react";
 
 const navItems = [
-  { label: "Home", icon: Home, active: true },
-  { label: "Parliament", icon: Vote, active: false },
-  { label: "Proposals", icon: FileText, active: false },
-  { label: "Analytics", icon: BarChart3, active: false }
+  { href: "/", label: "Home", icon: Home },
+  { href: "/parliament", label: "Parliament", icon: Vote },
+  { href: "/opinions", label: "Opinions", icon: FileText },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/governance", label: "Governance", icon: ShieldCheck }
 ];
 
 export function MobileBottomNav() {
+  const pathname = usePathname();
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0B0E11]/95 px-2 py-2 backdrop-blur md:hidden">
-      <ul className="mx-auto grid max-w-lg grid-cols-4 gap-1">
-        {navItems.map((item) => (
-          <li key={item.label}>
-            <button
-              type="button"
-              className={`flex w-full flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] ${
-                item.active
-                  ? "bg-nigeria-green/20 text-nigeria-green"
-                  : "text-ink-muted hover:bg-white/5 hover:text-white"
-              }`}
+    <Box
+      as="nav"
+      position="fixed"
+      bottom={0}
+      left={0}
+      right={0}
+      zIndex={30}
+      borderTop="1px solid"
+      borderColor="whiteAlpha.200"
+      bg="rgba(6, 9, 13, 0.95)"
+      backdropFilter="blur(8px)"
+      display={{ base: "block", md: "none" }}
+      px={2}
+      py={2}
+    >
+      <HStack justify="space-between" spacing={1} maxW="container.md" mx="auto">
+        {navItems.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <VStack
+              key={item.href}
+              as={NextLink}
+              href={item.href}
+              spacing={1}
+              flex={1}
+              py={1.5}
+              rounded="xl"
+              bg={active ? "rgba(0, 135, 81, 0.22)" : "transparent"}
+              color={active ? "nigeria.200" : "text.muted"}
+              transition="all .2s"
             >
-              <item.icon size={15} />
-              <span>{item.label}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </nav>
+              <Icon as={item.icon} boxSize={4} />
+              <Text fontSize="10px" letterSpacing="0.03em" fontWeight={active ? "bold" : "medium"}>
+                {item.label}
+              </Text>
+            </VStack>
+          );
+        })}
+      </HStack>
+    </Box>
   );
 }

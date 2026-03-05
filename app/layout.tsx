@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/chakra-provider";
+import { CivicProvider } from "@/components/providers/civic-provider";
 import { AnonymityBadge } from "@/components/layout/anonymity-badge";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
+import { Box } from "@chakra-ui/react";
 
 const bodyFont = IBM_Plex_Sans({
   variable: "--font-body",
@@ -19,7 +22,7 @@ const displayFont = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Nigeria DAO Parliament",
-  description: "Decentralized civic portal for national opinions, proposals, and voting."
+  description: "Decentralized civic portal for anonymous opinions, proposals, and transparent governance voting."
 };
 
 export default function RootLayout({
@@ -31,11 +34,18 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${bodyFont.variable} ${displayFont.variable} font-[var(--font-body)]`}>
         <Providers>
-          <div className="grid-noise min-h-screen">
-            <AnonymityBadge />
-            <main>{children}</main>
-            <MobileBottomNav />
-          </div>
+          <CivicProvider>
+            <div className="grid-noise min-h-screen">
+              <AnonymityBadge />
+              <Box maxW="7xl" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 4, lg: 6 }} pb={{ base: 24, md: 10 }}>
+                <Box display="flex" gap={{ base: 0, lg: 6 }} alignItems="flex-start">
+                  <DesktopSidebar />
+                  <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
+                </Box>
+              </Box>
+              <MobileBottomNav />
+            </div>
+          </CivicProvider>
         </Providers>
       </body>
     </html>
