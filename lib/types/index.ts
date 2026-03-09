@@ -2,6 +2,7 @@ export type ProposalStatus = "Draft" | "Public Discussion" | "Voting" | "Accepte
 
 export type Proposal = {
   id: string;
+  firestoreId?: string;
   title: string;
   summary: string;
   description?: string;
@@ -20,6 +21,7 @@ export type Proposal = {
 
 export type Opinion = {
   id: string;
+  firestoreId?: string;
   content: string;
   mediaUrls?: string[];
   cid: string;

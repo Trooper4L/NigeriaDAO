@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Button, HStack, useToast } from '@chakra-ui/react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { ProposalService } from '@/lib/services/proposal';
+import { FlowService } from '@/lib/services/flow';
+import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFlow } from '@/lib/hooks/useFlow';
 
@@ -54,10 +56,40 @@ export function VoteButton({ proposalId, onVoteSuccess }: VoteButtonProps) {
 
       toast({
         title: 'Vote recorded',
-        description: `Your ${choice} vote has been recorded on Flow blockchain`,
+        description: `Your ${choice} vote has been submitted`,
         status: 'success',
-        duration: 5000,
+        duration: 3000,
       });
+
+      if (isConnected) {
+        try {
+          await FlowService.castVote(proposalId, choice);
+          await FlowService.mintCivicNFT(user?.uid || '', 'participation');
+          toast({
+            title: '+10 NDAO • Participation Badge',
+            description: 'Civic participation badge minted on Flow',
+            status: 'info',
+            duration: 4000,
+          });
+        } catch (_) {
+        }
+      }
+
+      if (isConnected) {
+        api.post<{ resolved: { id: string; newStatus: string; author?: string }[] }>('/api/resolve', {})
+          .then(async ({ resolved }) => {
+            for (const r of resolved) {
+              if (r.newStatus === 'Accepted' && r.author) {
+                try {
+                  await FlowService.mintCivicNFT(r.author, 'contribution');
+                } catch (_) {}
+              }
+            }
+          })
+          .catch(() => {});
+      } else {
+        api.post('/api/resolve', {}).catch(() => {});
+      }
 
       if (onVoteSuccess) {
         onVoteSuccess();
