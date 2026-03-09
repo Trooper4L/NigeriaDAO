@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { db } from '../config/firebase';
-import lighthouse from '@lighthouse-web3/sdk';
+import { db } from '../config/firebase.js';
+import { synapseUpload } from '../config/synapseUpload.js';
 
 const router = Router();
 
@@ -37,23 +37,22 @@ router.post('/', async (req: Request, res: Response) => {
     const proposalData = {
       title, summary, description, author, category, region,
       createdAt: Date.now(),
-      status: 'Draft',
+      status: 'Voting',
       support: 0,
       against: 0,
       comments: 0,
     };
 
     const json = JSON.stringify(proposalData, null, 2);
-    const upload = await lighthouse.uploadText(json, process.env.LIGHTHOUSE_API_KEY || '', 'proposal.json');
-    const cid = upload.data.Hash;
+    const cid = await synapseUpload(json);
 
     const proposal = {
       id: `NDP-${String(Date.now()).slice(-6)}`,
       ...proposalData,
       cid,
       flowHash: '',
-      filecoinDealUrl: `https://filecoin.tools/${cid}`,
-      gatewayUrl: `https://gateway.lighthouse.storage/ipfs/${cid}`,
+      filecoinDealUrl: `https://calibration.filscan.io/tipset/message-detail?cid=${cid}`,
+      gatewayUrl: `https://gateway.calibration.node.glif.io/ipfs/${cid}`,
     };
 
     const docRef = await db.collection('proposals').add(proposal);

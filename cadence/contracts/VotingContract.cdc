@@ -38,13 +38,19 @@ access(all) contract VotingContract {
         if let existingVote = self.votes[proposalId]![voter] {
             let oldChoice = existingVote.choice
             let oldWeight = existingVote.weight
-            self.voteTallies[proposalId]![oldChoice] = self.voteTallies[proposalId]![oldChoice]! - oldWeight
+            let oldTally = self.voteTallies[proposalId]!
+            let oldCount = oldTally[oldChoice]!
+            oldTally[oldChoice] = oldCount - oldWeight
+            self.voteTallies[proposalId] = oldTally
         }
         
         let vote = Vote(proposalId: proposalId, voter: voter, choice: choice, weight: weight)
         self.votes[proposalId]!.insert(key: voter, vote)
         
-        self.voteTallies[proposalId]![choice] = self.voteTallies[proposalId]![choice]! + weight
+        let tally = self.voteTallies[proposalId]!
+        let current = tally[choice]!
+        tally[choice] = current + weight
+        self.voteTallies[proposalId] = tally
         
         emit VoteCast(proposalId: proposalId, voter: voter, choice: choice, weight: weight, timestamp: vote.timestamp)
     }

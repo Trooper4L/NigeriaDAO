@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { db } from '../config/firebase';
-import lighthouse from '@lighthouse-web3/sdk';
+import { db } from '../config/firebase.js';
+import { synapseUpload } from '../config/synapseUpload.js';
 
 const router = Router();
 
@@ -45,20 +45,79 @@ router.post('/', async (req: Request, res: Response) => {
     };
 
     const json = JSON.stringify(opinionData, null, 2);
-    const upload = await lighthouse.uploadText(json, process.env.LIGHTHOUSE_API_KEY || '', 'opinion.json');
-    const cid = upload.data.Hash;
+    const cid = await synapseUpload(json);
 
     const opinion = {
       id: `OP-${Date.now()}`,
       ...opinionData,
       cid,
       flowHash: '',
-      filecoinDealUrl: `https://filecoin.tools/${cid}`,
-      gatewayUrl: `https://gateway.lighthouse.storage/ipfs/${cid}`,
+      filecoinDealUrl: `https://calibration.filscan.io/tipset/message-detail?cid=${cid}`,
+      gatewayUrl: `https://gateway.calibration.node.glif.io/ipfs/${cid}`,
     };
 
     const docRef = await db.collection('opinions').add(opinion);
     res.status(201).json({ firestoreId: docRef.id, ...opinion });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:id/vote', async (req: Request, res: Response) => {
+  try {
+    const { type } = req.body;
+    if (type !== 'up' && type !== 'down') {
+      return res.status(400).json({ error: 'type must be "up" or "down"' });
+    }
+    const field = type === 'up' ? 'upvotes' : 'downvotes';
+    const docRef = db.collection('opinions').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Opinion not found' });
+    const current = (doc.data()?.[field] || 0) + 1;
+    await docRef.update({ [field]: current });
+    res.json({ [field]: current });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/comments', async (req: Request, res: Response) => {
+  try {
+    const { content, author = 'anonymous' } = req.body;
+    if (!content) return res.status(400).json({ error: 'content is required' });
+
+    const comment = {
+      content,
+      author,
+      createdAt: Date.now(),
+    };
+
+    const docRef = await db
+      .collection('opinions')
+      .doc(req.params.id)
+      .collection('comments')
+      .add(comment);
+
+    await db.collection('opinions').doc(req.params.id).update({
+      comments: (await db.collection('opinions').doc(req.params.id).get()).data()?.comments + 1 || 1,
+    });
+
+    res.status(201).json({ id: docRef.id, ...comment });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/comments', async (req: Request, res: Response) => {
+  try {
+    const snapshot = await db
+      .collection('opinions')
+      .doc(req.params.id)
+      .collection('comments')
+      .orderBy('createdAt', 'asc')
+      .get();
+    const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(comments);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

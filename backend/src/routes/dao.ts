@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { db } from '../config/firebase';
-import { fcl, CONTRACT_ADDRESS } from '../config/flow';
+import { db } from '../config/firebase.js';
+import { fcl, CONTRACT_ADDRESS } from '../config/flow.js';
 
 const router = Router();
 
