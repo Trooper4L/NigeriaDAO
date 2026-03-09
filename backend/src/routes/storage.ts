@@ -1,38 +1,60 @@
 import { Router, Request, Response } from 'express';
-import lighthouse from '@lighthouse-web3/sdk';
+import { getSynapse } from '../config/synapse.js';
+import { synapseUpload } from '../config/synapseUpload.js';
 
 const router = Router();
 
 router.post('/upload-text', async (req: Request, res: Response) => {
   try {
-    const { text, name = 'content.txt' } = req.body;
+    const { text } = req.body;
     if (!text) return res.status(400).json({ error: 'text is required' });
-    const upload = await lighthouse.uploadText(text, process.env.LIGHTHOUSE_API_KEY || '', name);
-    const cid = upload.data.Hash;
+
+    const cidStr = await synapseUpload(text);
+    const size = new TextEncoder().encode(text).length;
+
     res.json({
-      cid,
-      gatewayUrl: `https://gateway.lighthouse.storage/ipfs/${cid}`,
-      filecoinDealUrl: `https://filecoin.tools/${cid}`,
+      cid: cidStr,
+      size,
+      gatewayUrl: `https://gateway.calibration.node.glif.io/ipfs/${cidStr}`,
+      filecoinDealUrl: `https://calibration.filscan.io/tipset/message-detail?cid=${cidStr}`,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/deal-status/:cid', async (req: Request, res: Response) => {
+router.post('/upload-image', async (req: Request, res: Response) => {
   try {
-    const response = await fetch(`https://api.lighthouse.storage/api/lighthouse/deal_status?cid=${req.params.cid}`);
-    const data = await response.json();
-    res.json(data);
+    const { data, mimeType } = req.body;
+    if (!data) return res.status(400).json({ error: 'data (base64) is required' });
+
+    const buffer = Buffer.from(data, 'base64');
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File too large (max 10MB)' });
+    }
+
+    const synapse = await getSynapse();
+    const bytes = new Uint8Array(buffer.length < 127 ? 127 : buffer.length);
+    bytes.set(buffer);
+    const { pieceCid } = await synapse.storage.upload(bytes);
+    const cidStr = pieceCid.toString();
+
+    res.json({
+      cid: cidStr,
+      url: `https://gateway.calibration.node.glif.io/ipfs/${cidStr}`,
+      mimeType: mimeType || 'application/octet-stream',
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/uploads', async (_req: Request, res: Response) => {
+router.get('/download/:pieceCid', async (req: Request, res: Response) => {
   try {
-    const result = await lighthouse.getUploads(process.env.LIGHTHOUSE_API_KEY || '');
-    res.json(result.data.fileList || []);
+    const synapse = await getSynapse();
+    const data = await synapse.storage.download({ pieceCid: req.params.pieceCid });
+    const text = new TextDecoder().decode(data);
+    res.json({ content: text });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

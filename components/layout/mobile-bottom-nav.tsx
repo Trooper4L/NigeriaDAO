@@ -1,13 +1,13 @@
 "use client";
 
-import { BarChart3, FileText, Home, MessageSquare, Coins } from "lucide-react";
+import { BarChart3, Coins, Home, MessageSquare, Vote } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Home", icon: Home, href: "/" },
+  { label: "Parliament", icon: Vote, href: "/parliament" },
   { label: "Opinions", icon: MessageSquare, href: "/opinions" },
-  { label: "Proposals", icon: FileText, href: "/proposals" },
   { label: "Analytics", icon: BarChart3, href: "/analytics" },
   { label: "DAO", icon: Coins, href: "/dao" }
 ];
