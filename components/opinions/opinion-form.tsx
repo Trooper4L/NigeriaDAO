@@ -4,19 +4,43 @@ import { useState } from 'react';
 import { Box, Button, Textarea, VStack, HStack, Text, useToast } from '@chakra-ui/react';
 import { Upload, Send } from 'lucide-react';
 import { OpinionService } from '@/lib/services/opinion';
+import { FlowService } from '@/lib/services/flow';
+import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useFlow } from '@/lib/hooks/useFlow';
 
-export function OpinionForm() {
+interface OpinionFormProps {
+  onPosted?: () => void;
+}
+
+export function OpinionForm({ onPosted }: OpinionFormProps = {}) {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, isAuthenticated, signInAnonymous } = useAuth();
+  const { isConnected } = useFlow();
   const toast = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
     }
+  };
+
+  const uploadFiles = async (filesToUpload: File[]): Promise<string[]> => {
+    const urls: string[] = [];
+    for (const file of filesToUpload) {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((acc, byte) => acc + String.fromCharCode(byte), '')
+      );
+      const result = await api.post<{ url: string }>('/api/storage/upload-image', {
+        data: base64,
+        mimeType: file.type,
+      });
+      urls.push(result.url);
+    }
+    return urls;
   };
 
   const handleSubmit = async () => {
@@ -47,21 +71,40 @@ export function OpinionForm() {
     setIsSubmitting(true);
 
     try {
-      await OpinionService.createOpinion(
+      let mediaUrls: string[] = [];
+      if (files.length > 0) {
+        toast({ title: 'Uploading media...', status: 'info', duration: 2000 });
+        mediaUrls = await uploadFiles(files);
+      }
+
+      const opinion = await OpinionService.createOpinion(
         content,
         user?.uid || 'anonymous',
-        files.length > 0 ? files : undefined
+        mediaUrls.length > 0 ? mediaUrls : undefined
       );
 
       toast({
         title: 'Opinion posted',
-        description: 'Your opinion has been stored on IPFS and Flow blockchain',
+        description: 'Stored on Filecoin IPFS',
         status: 'success',
-        duration: 5000,
+        duration: 3000,
       });
+
+      if (isConnected && opinion?.cid) {
+        try {
+          await FlowService.storeOpinionHash(opinion.cid, JSON.stringify({ author: user?.uid, content: content.slice(0, 100) }));
+          toast({
+            title: 'Opinion registered on Flow',
+            description: `CID anchored on-chain: ${opinion.cid.slice(0, 14)}…`,
+            status: 'info',
+            duration: 4000,
+          });
+        } catch (_) {}
+      }
 
       setContent('');
       setFiles([]);
+      onPosted?.();
     } catch (error) {
       toast({
         title: 'Failed to post opinion',
