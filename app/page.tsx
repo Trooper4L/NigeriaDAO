@@ -1,33 +1,41 @@
 "use client";
 
 import NextLink from "next/link";
-import { ArrowRight, BarChart3, FileText, ShieldCheck, Vote } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { ArrowRight, BarChart3, FileText, Vote } from "lucide-react";
 import { Badge, Box, Button, Grid, GridItem, Heading, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import { useCivic } from "@/components/providers/civic-provider";
-import { MotionBox } from "@/components/ui/motion-box";
+import { AnalyticsService } from "@/lib/services/analytics";
+import { CivicAnalytics } from "@/lib/types";
 
 export default function Home() {
-  const { analytics, store } = useCivic();
+  const [analytics, setAnalytics] = useState<CivicAnalytics | null>(null);
+
+  useEffect(() => {
+    AnalyticsService.getCivicAnalytics()
+      .then(setAnalytics)
+      .catch(() => {});
+  }, []);
 
   const cards = [
     {
       label: "Active Proposals",
-      value: String(store.proposals.length),
-      helper: `${analytics.openVoting} in voting`,
+      value: analytics ? String(analytics.totalProposals) : "—",
+      helper: "Civic initiatives",
       icon: Vote,
       color: "nigeria.300"
     },
     {
       label: "Published Opinions",
-      value: String(store.opinions.filter((o) => o.moderationStatus === "approved").length),
-      helper: `${analytics.moderationQueue} flagged`,
+      value: analytics ? String(analytics.totalOpinions) : "—",
+      helper: "Stored on IPFS",
       icon: FileText,
       color: "flow.500"
     },
     {
       label: "National Sentiment",
-      value: analytics.nationalSentiment.toFixed(2),
-      helper: "AI-assisted score",
+      value: analytics ? `${analytics.sentimentScore.toFixed(1)}%` : "—",
+      helper: "Community score",
       icon: BarChart3,
       color: "blue.300"
     }
@@ -36,7 +44,7 @@ export default function Home() {
   return (
     <Box py={{ base: 2, md: 4 }}>
       <Stack spacing={8}>
-        <MotionBox initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+        <Box>
           <Grid
             gap={5}
             templateColumns={{ base: "1fr", lg: "1.6fr 1fr" }}
@@ -66,26 +74,32 @@ export default function Home() {
                 </Button>
               </HStack>
             </GridItem>
-            <GridItem>
-              <Stack spacing={3}>
-                <HStack spacing={2}>
-                  <Icon as={ShieldCheck} color="flow.500" boxSize={5} />
-                  <Text fontWeight="semibold">Protection + transparency</Text>
-                </HStack>
-                <Text fontSize="sm" color="text.muted">
-                  Every entry generates a deterministic CID and Flow-style transaction proof for testnet workflows.
-                </Text>
-              </Stack>
+            <GridItem display="flex" alignItems="center" justifyContent="center">
+              <Box
+                position="relative"
+                w="100%"
+                rounded="xl"
+                overflow="hidden"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+              >
+                <Image
+                  src="/naijadao-hero.png"
+                  alt="NaijaDAO Hero"
+                  width={560}
+                  height={315}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  priority
+                />
+              </Box>
             </GridItem>
           </Grid>
-        </MotionBox>
+        </Box>
 
         <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
-          {cards.map((card, index) => (
-            <MotionBox
+          {cards.map((card) => (
+            <Box
               key={card.label}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
               p={5}
               rounded="xl"
               border="1px solid"
@@ -104,7 +118,7 @@ export default function Home() {
                 </Stack>
                 <Icon as={card.icon} color={card.color} boxSize={5} />
               </HStack>
-            </MotionBox>
+            </Box>
           ))}
         </Grid>
       </Stack>

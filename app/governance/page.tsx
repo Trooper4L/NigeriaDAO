@@ -1,132 +1,80 @@
 "use client";
 
-import { ElementType } from "react";
+import { ElementType, useEffect, useState } from "react";
 import { Coins, ShieldCheck, Wallet } from "lucide-react";
-import { Badge, Box, Button, Grid, Heading, HStack, Icon, Stack, Text, useToast } from "@chakra-ui/react";
-import { useCivic } from "@/components/providers/civic-provider";
-import { MotionBox } from "@/components/ui/motion-box";
-
-const treasuryInitiatives = [
-  {
-    id: "treasury_education",
-    title: "State Education Transparency Engine",
-    budget: "125,000 NDAO",
-    impact: "Public disbursement verification"
-  },
-  {
-    id: "treasury_health",
-    title: "Primary Health Inventory Trace",
-    budget: "88,000 NDAO",
-    impact: "Drug stock accountability"
-  }
-];
+import {
+  Box, Grid, Heading, HStack, Icon, Spinner, Stack, Text,
+} from "@chakra-ui/react";
+import { ProposalFeed } from "@/components/parliament/proposal-feed";
+import { ProposalService } from "@/lib/services/proposal";
+import { AnalyticsService } from "@/lib/services/analytics";
+import { api } from "@/lib/api/client";
 
 export default function GovernancePage() {
-  const toast = useToast();
-  const { store, castVote } = useCivic();
-  const votingProposals = store.proposals.filter((proposal) => proposal.status === "Voting");
+  const [totalProposals, setTotalProposals] = useState<number | null>(null);
+  const [totalVotes, setTotalVotes] = useState<number | null>(null);
+  const [acceptedCount, setAcceptedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadData = () => {
+      AnalyticsService.getCivicAnalytics().then((data) => {
+        setTotalProposals(data.totalProposals);
+        setTotalVotes(data.totalVotes);
+      }).catch(() => setTotalProposals(0));
+
+      ProposalService.getProposals().then((data) => {
+        setAcceptedCount(data.filter((p) => p.status === "Accepted").length);
+      }).catch(() => setAcceptedCount(0));
+    };
+
+    loadData();
+    api.post('/api/resolve', {}).catch(() => {});
+
+    const interval = setInterval(() => {
+      api.post('/api/resolve', {}).catch(() => {});
+      loadData();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Box py={{ base: 2, md: 4 }}>
       <Stack spacing={6}>
         <Heading size="lg">DAO Governance</Heading>
+
         <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
-          <InfoCard icon={Wallet} title="Treasury Mode" value="Testnet Active" />
-          <InfoCard icon={Coins} title="NDAO Governance" value="Community Voting" />
-          <InfoCard icon={ShieldCheck} title="Execution" value="Manual Safeguards" />
+          <InfoCard
+            icon={Wallet}
+            title="Total Proposals"
+            value={totalProposals !== null ? String(totalProposals) : null}
+          />
+          <InfoCard
+            icon={Coins}
+            title="Total Votes Cast"
+            value={totalVotes !== null ? String(totalVotes) : null}
+          />
+          <InfoCard
+            icon={ShieldCheck}
+            title="Accepted Proposals"
+            value={acceptedCount !== null ? String(acceptedCount) : null}
+          />
         </Grid>
 
         <Box p={5} rounded="xl" border="1px solid" borderColor="whiteAlpha.300" bg="rgba(14,21,32,0.8)">
           <Heading size="sm" mb={4}>
-            Treasury Initiatives
+            Active Proposals
           </Heading>
-          <Stack spacing={3}>
-            {treasuryInitiatives.map((item, index) => (
-              <MotionBox
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                p={4}
-                rounded="lg"
-                bg="rgba(9,14,21,0.8)"
-                border="1px solid"
-                borderColor="whiteAlpha.200"
-              >
-                <HStack justify="space-between" align="start">
-                  <Stack spacing={1}>
-                    <Text fontWeight="semibold">{item.title}</Text>
-                    <Text fontSize="sm" color="text.muted">
-                      {item.impact}
-                    </Text>
-                  </Stack>
-                  <Badge colorScheme="green">{item.budget}</Badge>
-                </HStack>
-              </MotionBox>
-            ))}
-          </Stack>
-        </Box>
-
-        <Box p={5} rounded="xl" border="1px solid" borderColor="whiteAlpha.300" bg="rgba(14,21,32,0.8)">
-          <Heading size="sm" mb={4}>
-            Governance Voting (Mirrors Parliament Voting Stage)
-          </Heading>
-          {votingProposals.length === 0 ? (
-            <Text color="text.muted">No proposals are currently in voting stage.</Text>
-          ) : (
-            <Stack spacing={3}>
-              {votingProposals.map((proposal) => (
-                <HStack
-                  key={proposal.id}
-                  p={3}
-                  rounded="lg"
-                  border="1px solid"
-                  borderColor="whiteAlpha.200"
-                  bg="rgba(9,14,21,0.8)"
-                  justify="space-between"
-                  align="start"
-                >
-                  <Stack spacing={1}>
-                    <Text fontWeight="semibold">{proposal.title}</Text>
-                    <Text color="text.muted" fontSize="sm">
-                      {proposal.summary}
-                    </Text>
-                  </Stack>
-                  <HStack>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const result = castVote(proposal.id, "support");
-                        toast({ status: result.ok ? "success" : "warning", description: result.message });
-                      }}
-                    >
-                      Support
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const result = castVote(proposal.id, "against");
-                        toast({ status: result.ok ? "success" : "warning", description: result.message });
-                      }}
-                    >
-                      Against
-                    </Button>
-                  </HStack>
-                </HStack>
-              ))}
-            </Stack>
-          )}
+          <ProposalFeed />
         </Box>
       </Stack>
     </Box>
   );
 }
 
-function InfoCard({ title, value, icon }: { title: string; value: string; icon: ElementType }) {
+function InfoCard({ title, value, icon }: { title: string; value: string | null; icon: ElementType }) {
   return (
-    <MotionBox
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+    <Box
       p={4}
       rounded="xl"
       border="1px solid"
@@ -138,10 +86,14 @@ function InfoCard({ title, value, icon }: { title: string; value: string; icon: 
           <Text fontSize="xs" textTransform="uppercase" color="text.muted" letterSpacing="0.08em">
             {title}
           </Text>
-          <Text fontWeight="bold">{value}</Text>
+          {value === null ? (
+            <Spinner size="sm" color="#00EF8B" />
+          ) : (
+            <Text fontWeight="bold">{value}</Text>
+          )}
         </Stack>
         <Icon as={icon} boxSize={5} color="flow.500" />
       </HStack>
-    </MotionBox>
+    </Box>
   );
 }

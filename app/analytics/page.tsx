@@ -1,3 +1,5 @@
+'use client';
+
 import { AnalyticsDashboard } from '@/components/analytics/analytics-dashboard';
 import { Container } from '@chakra-ui/react';
 

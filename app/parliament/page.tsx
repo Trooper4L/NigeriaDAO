@@ -1,86 +1,86 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { CalendarClock, Check, ChevronRight, Gauge, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import {
-  Badge,
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  Grid,
-  Heading,
-  HStack,
-  Icon,
-  Input,
-  Select,
-  Stack,
-  Tag,
-  Text,
-  Textarea,
-  useToast
+  Box, Button, FormControl, FormLabel, Grid, Heading,
+  HStack, Icon, Input, Select, Stack, Text, Textarea, useToast,
 } from "@chakra-ui/react";
-import { useCivic } from "@/components/providers/civic-provider";
-import { MotionBox } from "@/components/ui/motion-box";
-import { NIGERIAN_STATES } from "@/lib/civic-engine";
-import { ProposalStatus } from "@/lib/civic-types";
+import { ProposalFeed } from "@/components/parliament/proposal-feed";
+import { ProposalService } from "@/lib/services/proposal";
+import { FlowService } from "@/lib/services/flow";
+import { api } from "@/lib/api/client";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useFlow } from "@/lib/hooks/useFlow";
 
-const statusColors: Record<ProposalStatus, string> = {
-  Draft: "gray",
-  "Public Discussion": "blue",
-  Voting: "green",
-  Accepted: "teal",
-  Rejected: "red"
-};
+const NIGERIAN_STATES = [
+  "FCT", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
+  "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti",
+  "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
+  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
+  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+];
 
 export default function ParliamentPage() {
   const toast = useToast();
-  const { store, createProposal, castVote, getProposalMetrics, transitionProposal, finalizeVote } = useCivic();
+  const { user, isAuthenticated, signInAnonymous } = useAuth();
+  const { isConnected } = useFlow();
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [form, setForm] = useState({
     title: "",
     summary: "",
-    details: "",
+    description: "",
     state: "FCT",
-    tags: "",
-    voteDeadline: ""
+    category: "",
   });
 
-  const sortedProposals = useMemo(
-    () => [...store.proposals].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [store.proposals]
-  );
-
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!form.title || !form.summary || !form.details || !form.voteDeadline) {
-      toast({ status: "error", description: "Complete all required proposal fields." });
+  const handleSubmit = async () => {
+    if (!form.title.trim() || !form.summary.trim() || !form.description.trim()) {
+      toast({ status: "error", description: "Title, summary and description are required." });
       return;
     }
 
+    if (!isAuthenticated) {
+      try { await signInAnonymous(); } catch {
+        toast({ status: "error", description: "Authentication failed. Please try again." });
+        return;
+      }
+    }
+
     setLoading(true);
-    await createProposal({
-      title: form.title,
-      summary: form.summary,
-      details: form.details,
-      state: form.state,
-      tags: form.tags
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      voteDeadline: form.voteDeadline
-    });
-    setLoading(false);
-    setForm({ title: "", summary: "", details: "", state: "FCT", tags: "", voteDeadline: "" });
-    toast({ status: "success", description: "Proposal published with flow proof + CID." });
+    try {
+      await ProposalService.createProposal(
+        form.title,
+        form.summary,
+        form.description,
+        user?.uid || "anonymous",
+        form.category,
+        form.state,
+      );
+      toast({ status: "success", description: "Proposal submitted and open for voting." });
+
+      if (isConnected) {
+        try {
+          await FlowService.mintCivicNFT(user?.uid || '', 'governance');
+          toast({ title: '+25 NDAO • Governance Badge', description: 'Governance contributor badge minted on Flow', status: 'info', duration: 4000 });
+        } catch (_) {}
+      }
+
+      api.post('/api/resolve', {}).catch(() => {});
+      setForm({ title: "", summary: "", description: "", state: "FCT", category: "" });
+      setRefreshKey((k) => k + 1);
+    } catch (e: any) {
+      toast({ status: "error", description: e.message || "Failed to create proposal." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Box py={{ base: 2, md: 4 }}>
       <Grid templateColumns={{ base: "1fr", xl: "1.1fr 1.4fr" }} gap={6}>
-        <MotionBox
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
+        <Box
           p={5}
           rounded="xl"
           border="1px solid"
@@ -93,194 +93,100 @@ export default function ParliamentPage() {
             <Heading size="md">Create Civic Proposal</Heading>
           </HStack>
           <Text color="text.muted" fontSize="sm" mb={4}>
-            Proposals start in Draft and can move through public discussion and voting.
+            Proposals start in Draft and move through public discussion and voting.
           </Text>
-          <Box as="form" onSubmit={onSubmit}>
-            <Stack spacing={3}>
+
+          <Stack spacing={3}>
             <FormControl isRequired>
-              <FormLabel>Title</FormLabel>
-              <Input value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} />
+              <FormLabel fontSize="sm">Title</FormLabel>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))}
+                bg="rgba(11,14,17,0.8)"
+                border="1px solid rgba(0,239,139,0.2)"
+                color="white"
+                _focus={{ borderColor: "#00EF8B", boxShadow: "0 0 0 1px #00EF8B" }}
+              />
             </FormControl>
+
             <FormControl isRequired>
-              <FormLabel>Summary</FormLabel>
+              <FormLabel fontSize="sm">Summary</FormLabel>
               <Textarea
                 rows={2}
                 value={form.summary}
                 onChange={(e) => setForm((s) => ({ ...s, summary: e.target.value }))}
+                bg="rgba(11,14,17,0.8)"
+                border="1px solid rgba(0,239,139,0.2)"
+                color="white"
+                _focus={{ borderColor: "#00EF8B", boxShadow: "0 0 0 1px #00EF8B" }}
               />
             </FormControl>
+
             <FormControl isRequired>
-              <FormLabel>Details</FormLabel>
+              <FormLabel fontSize="sm">Description</FormLabel>
               <Textarea
                 rows={4}
-                value={form.details}
-                onChange={(e) => setForm((s) => ({ ...s, details: e.target.value }))}
+                value={form.description}
+                onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                bg="rgba(11,14,17,0.8)"
+                border="1px solid rgba(0,239,139,0.2)"
+                color="white"
+                _focus={{ borderColor: "#00EF8B", boxShadow: "0 0 0 1px #00EF8B" }}
               />
             </FormControl>
-            <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={3}>
-              <FormControl isRequired>
-                <FormLabel>State</FormLabel>
-                <Select value={form.state} onChange={(e) => setForm((s) => ({ ...s, state: e.target.value }))}>
-                  {NIGERIAN_STATES.map((state) => (
-                    <option key={state} value={state}>
-                      {state}
-                    </option>
+
+            <Grid templateColumns="1fr 1fr" gap={3}>
+              <FormControl>
+                <FormLabel fontSize="sm">State</FormLabel>
+                <Select
+                  value={form.state}
+                  onChange={(e) => setForm((s) => ({ ...s, state: e.target.value }))}
+                  bg="rgba(11,14,17,0.8)"
+                  border="1px solid rgba(0,239,139,0.2)"
+                  color="white"
+                  _focus={{ borderColor: "#00EF8B" }}
+                >
+                  {NIGERIAN_STATES.map((st) => (
+                    <option key={st} value={st}>{st}</option>
                   ))}
                 </Select>
               </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Vote Deadline</FormLabel>
-                <Input
-                  type="datetime-local"
-                  value={form.voteDeadline}
-                  onChange={(e) => setForm((s) => ({ ...s, voteDeadline: e.target.value }))}
-                />
+
+              <FormControl>
+                <FormLabel fontSize="sm">Category</FormLabel>
+                <Select
+                  value={form.category}
+                  onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))}
+                  bg="rgba(11,14,17,0.8)"
+                  border="1px solid rgba(0,239,139,0.2)"
+                  color="white"
+                  _focus={{ borderColor: "#00EF8B" }}
+                >
+                  <option value="">Select Category</option>
+                  {["Education","Healthcare","Infrastructure","Economy","Security",
+                    "Environment","Technology","Governance","Social Welfare"].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </Select>
               </FormControl>
             </Grid>
-            <FormControl>
-              <FormLabel>Tags (comma separated)</FormLabel>
-              <Input value={form.tags} onChange={(e) => setForm((s) => ({ ...s, tags: e.target.value }))} />
-            </FormControl>
-            <Button type="submit" isLoading={loading}>
+
+            <Button
+              bg="#008751"
+              color="white"
+              _hover={{ bg: "#006d40" }}
+              onClick={handleSubmit}
+              isLoading={loading}
+              loadingText="Submitting..."
+            >
               Submit Proposal
             </Button>
-            </Stack>
-          </Box>
-        </MotionBox>
+          </Stack>
+        </Box>
 
         <Stack spacing={4}>
           <Heading size="md">Proposal Feed</Heading>
-          {sortedProposals.length === 0 ? (
-            <Box p={6} rounded="xl" border="1px dashed" borderColor="whiteAlpha.300">
-              <Text color="text.muted">No proposals yet. Publish the first one for this wave.</Text>
-            </Box>
-          ) : (
-            sortedProposals.map((proposal, index) => {
-              const metrics = getProposalMetrics(proposal.id);
-              return (
-                <MotionBox
-                  key={proposal.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  p={5}
-                  rounded="xl"
-                  border="1px solid"
-                  borderColor="whiteAlpha.300"
-                  bg="rgba(12,18,28,0.82)"
-                >
-                  <HStack justify="space-between" align="start" mb={3}>
-                    <Stack spacing={1}>
-                      <Heading size="sm">{proposal.title}</Heading>
-                      <Text fontSize="sm" color="text.muted">
-                        {proposal.summary}
-                      </Text>
-                    </Stack>
-                    <Badge colorScheme={statusColors[proposal.status]}>{proposal.status}</Badge>
-                  </HStack>
-
-                  <HStack spacing={2} mb={3} flexWrap="wrap">
-                    <Tag colorScheme="green">{proposal.state}</Tag>
-                    {proposal.tags.map((tag) => (
-                      <Tag key={`${proposal.id}_${tag}`} colorScheme="gray">
-                        {tag}
-                      </Tag>
-                    ))}
-                    <Tag colorScheme="purple">
-                      <HStack spacing={1}>
-                        <CalendarClock size={12} />
-                        <Text>{new Date(proposal.voteDeadline).toLocaleString()}</Text>
-                      </HStack>
-                    </Tag>
-                  </HStack>
-
-                  <Text fontSize="sm" color="text.muted" mb={3}>
-                    {proposal.details}
-                  </Text>
-
-                  <Stack spacing={2} mb={3}>
-                    <HStack justify="space-between" fontSize="xs" color="text.muted">
-                      <Text>Support {metrics.support}</Text>
-                      <Text>Against {metrics.against}</Text>
-                      <Text>Total {metrics.total}</Text>
-                    </HStack>
-                    <Box h={2} rounded="full" bg="whiteAlpha.200" overflow="hidden">
-                      <Box h="full" bg="nigeria.400" w={`${metrics.supportPct}%`} transition="width .35s ease" />
-                    </Box>
-                  </Stack>
-
-                  <HStack spacing={2} flexWrap="wrap">
-                    {proposal.status === "Voting" && (
-                      <>
-                        <Button
-                          size="sm"
-                          leftIcon={<ThumbsUp size={14} />}
-                          onClick={() => {
-                            const result = castVote(proposal.id, "support");
-                            toast({ status: result.ok ? "success" : "warning", description: result.message });
-                          }}
-                        >
-                          Support
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          leftIcon={<ThumbsDown size={14} />}
-                          onClick={() => {
-                            const result = castVote(proposal.id, "against");
-                            toast({ status: result.ok ? "success" : "warning", description: result.message });
-                          }}
-                        >
-                          Against
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          leftIcon={<Check size={14} />}
-                          onClick={() => {
-                            const result = finalizeVote(proposal.id);
-                            toast({ status: result.ok ? "success" : "warning", description: result.message });
-                          }}
-                        >
-                          Finalize
-                        </Button>
-                      </>
-                    )}
-
-                    {proposal.status === "Draft" && (
-                      <Button
-                        size="sm"
-                        leftIcon={<ChevronRight size={14} />}
-                        onClick={() => {
-                          const result = transitionProposal(proposal.id, "Public Discussion");
-                          toast({ status: result.ok ? "success" : "warning", description: result.message });
-                        }}
-                      >
-                        Open Discussion
-                      </Button>
-                    )}
-                    {proposal.status === "Public Discussion" && (
-                      <Button
-                        size="sm"
-                        leftIcon={<Gauge size={14} />}
-                        onClick={() => {
-                          const result = transitionProposal(proposal.id, "Voting");
-                          toast({ status: result.ok ? "success" : "warning", description: result.message });
-                        }}
-                      >
-                        Start Voting
-                      </Button>
-                    )}
-                  </HStack>
-
-                  <Stack mt={4} spacing={1} fontSize="xs" color="text.muted">
-                    <Text>Author: {proposal.authorAlias}</Text>
-                    <Text>CID: {proposal.cid}</Text>
-                    <Text>Flow Tx: {proposal.flowHash}</Text>
-                  </Stack>
-                </MotionBox>
-              );
-            })
-          )}
+          <ProposalFeed key={refreshKey} />
         </Stack>
       </Grid>
     </Box>
