@@ -1,20 +1,25 @@
 "use client";
 
 import NextLink from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, FileText, Home, Landmark, ShieldCheck, Vote } from "lucide-react";
-import { Box, HStack, Icon, Stack, Text, VStack } from "@chakra-ui/react";
+import { BarChart3, Coins, FileText, Home, ShieldCheck, Vote } from "lucide-react";
+import { Box, HStack, Icon, Stack, Text, VStack, useDisclosure, Divider } from "@chakra-ui/react";
+import { FlowWalletModal } from "@/components/wallet/flow-wallet-modal";
+import { FlowWalletConnect } from "@/components/wallet/flow-wallet-connect";
 
 const navItems = [
   { href: "/", label: "Overview", icon: Home },
   { href: "/parliament", label: "Parliament", icon: Vote },
   { href: "/opinions", label: "Opinions", icon: FileText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/governance", label: "Governance", icon: ShieldCheck }
+  { href: "/governance", label: "Governance", icon: ShieldCheck },
+  { href: "/dao", label: "DAO & Tokens", icon: Coins },
 ];
 
 export function DesktopSidebar() {
   const pathname = usePathname();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   return (
     <Box
@@ -32,12 +37,16 @@ export function DesktopSidebar() {
       top="88px"
     >
       <HStack spacing={3} px={2} py={3} mb={3}>
-        <Box p={2} rounded="lg" bg="rgba(0, 135, 81, 0.2)">
-          <Icon as={Landmark} color="nigeria.300" boxSize={4} />
-        </Box>
+        <Image
+          src="/naijadao-logo.png"
+          alt="NaijaDAO Logo"
+          width={40}
+          height={40}
+          style={{ borderRadius: '10px', objectFit: 'contain' }}
+        />
         <Stack spacing={0}>
           <Text fontWeight="bold" fontSize="sm">
-            Nigeria DAO
+            NaijaDAO
           </Text>
           <Text fontSize="xs" color="text.muted">
             Parliament Portal
@@ -72,6 +81,13 @@ export function DesktopSidebar() {
           );
         })}
       </VStack>
+
+      <Divider borderColor="whiteAlpha.100" mt={4} mb={3} />
+      <Box px={1}>
+        <FlowWalletConnect onOpenModal={onOpen} />
+      </Box>
+
+      <FlowWalletModal isOpen={isOpen} onClose={onClose} />
     </Box>
   );
 }

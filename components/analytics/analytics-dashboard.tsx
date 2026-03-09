@@ -23,19 +23,11 @@ export function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAnalytics();
+    AnalyticsService.getCivicAnalytics()
+      .then((data) => setAnalytics(data))
+      .catch((error) => console.error('Failed to load analytics:', error))
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadAnalytics = async () => {
-    try {
-      const data = await AnalyticsService.getCivicAnalytics();
-      setAnalytics(data);
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
