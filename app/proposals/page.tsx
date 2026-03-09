@@ -1,3 +1,5 @@
+'use client';
+
 import { ProposalFeed } from '@/components/parliament/proposal-feed';
 import { CreateProposalForm } from '@/components/proposals/create-proposal-form';
 import { Box, Container, VStack, Text, Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react';
