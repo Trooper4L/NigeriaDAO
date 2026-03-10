@@ -1,4 +1,4 @@
-import CivicNFT from 0xb0cc0436d4ca392a
+import CivicNFT from 0x513ea4a723716b6f
 
 /// Claims a CivicNFT badge for the signer.
 /// Collection must already be set up via SetupCivicNFTCollection.

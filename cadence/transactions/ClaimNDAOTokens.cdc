@@ -1,4 +1,4 @@
-import NDAOToken from 0xb0cc0436d4ca392a
+import NDAOToken from 0x513ea4a723716b6f
 
 /// Claims NDAO tokens for the signer.
 /// Vault must already be set up via SetupNDAOVault.

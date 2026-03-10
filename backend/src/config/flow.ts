@@ -6,5 +6,5 @@ fcl.config({
   'app.detail.id': process.env.FLOW_APP_ID || '',
 });
 
-export const CONTRACT_ADDRESS = process.env.FLOW_CONTRACT_ADDRESS || '0xb0cc0436d4ca392a';
+export const CONTRACT_ADDRESS = process.env.FLOW_CONTRACT_ADDRESS || '0x513ea4a723716b6f';
 export { fcl };

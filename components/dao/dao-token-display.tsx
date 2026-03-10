@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Box, HStack, VStack, Text, Badge, Spinner, IconButton } from '@chakra-ui/react';
-import { Coins, Award, RefreshCw } from 'lucide-react';
+import { Box, HStack, VStack, Text, Badge, Spinner, IconButton, Button, useToast } from '@chakra-ui/react';
+import { Coins, Award, RefreshCw, PlusCircle } from 'lucide-react';
 import { FlowService } from '@/lib/services/flow';
 import { useFlow } from '@/lib/hooks/useFlow';
 import { DAOToken } from '@/lib/types';
@@ -11,6 +11,34 @@ export function DAOTokenDisplay() {
   const { address, isConnected } = useFlow();
   const [tokenData, setTokenData] = useState<DAOToken | null>(null);
   const [loading, setLoading] = useState(false);
+  const [addingToken, setAddingToken] = useState(false);
+  const toast = useToast();
+
+  const handleAddToWallet = async () => {
+    setAddingToken(true);
+    try {
+      await FlowService.suggestNDAOToken();
+      toast({
+        title: 'NDAO token added!',
+        description: 'The NDAO token has been registered in your wallet.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+        position: 'top-right',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Could not add token',
+        description: err?.message || 'Your wallet may not support auto-add. Set up the vault manually.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-right',
+      });
+    } finally {
+      setAddingToken(false);
+    }
+  };
 
   const loadTokenData = useCallback(async () => {
     if (!address) return;
@@ -139,6 +167,21 @@ export function DAOTokenDisplay() {
             </Text>
           </HStack>
         </Box>
+
+        <Button
+          leftIcon={<PlusCircle size={15} />}
+          size="sm"
+          variant="outline"
+          borderColor="rgba(0,239,139,0.35)"
+          color="#00EF8B"
+          _hover={{ bg: 'rgba(0,239,139,0.1)', borderColor: '#00EF8B' }}
+          onClick={handleAddToWallet}
+          isLoading={addingToken}
+          loadingText="Adding…"
+          w="full"
+        >
+          Add NDAO to Wallet
+        </Button>
       </VStack>
     </Box>
   );

@@ -1,6 +1,6 @@
 import { fcl } from '@/lib/config/flow';
 
-const CONTRACTS = '0xb0cc0436d4ca392a';
+const CONTRACTS = '0x513ea4a723716b6f';
 
 export class FlowService {
   static async authenticate(): Promise<any> {
@@ -29,17 +29,21 @@ export class FlowService {
 
         transaction {
           prepare(signer: auth(Storage, Capabilities) &Account) {
-            if signer.storage.borrow<&NDAOToken.Vault>(from: NDAOToken.VaultStoragePath) == nil {
+            let storagePath = /storage/NDAOTokenVault
+            let publicPath = /public/NDAOTokenVault
+            let receiverPath = /public/NDAOTokenReceiver
+
+            if signer.storage.borrow<&NDAOToken.Vault>(from: storagePath) == nil {
               let vault <- NDAOToken.createEmptyVault(vaultType: Type<@NDAOToken.Vault>())
-              signer.storage.save(<-vault, to: NDAOToken.VaultStoragePath)
+              signer.storage.save(<-vault, to: storagePath)
             }
-            if !signer.capabilities.get<&NDAOToken.Vault>(NDAOToken.VaultPublicPath).check() {
-              let vaultCap = signer.capabilities.storage.issue<&NDAOToken.Vault>(NDAOToken.VaultStoragePath)
-              signer.capabilities.publish(vaultCap, at: NDAOToken.VaultPublicPath)
+            if !signer.capabilities.get<&NDAOToken.Vault>(publicPath).check() {
+              let vaultCap = signer.capabilities.storage.issue<&NDAOToken.Vault>(storagePath)
+              signer.capabilities.publish(vaultCap, at: publicPath)
             }
-            if !signer.capabilities.get<&{FungibleToken.Receiver}>(NDAOToken.ReceiverPublicPath).check() {
-              let receiverCap = signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(NDAOToken.VaultStoragePath)
-              signer.capabilities.publish(receiverCap, at: NDAOToken.ReceiverPublicPath)
+            if !signer.capabilities.get<&{FungibleToken.Receiver}>(receiverPath).check() {
+              let receiverCap = signer.capabilities.storage.issue<&{FungibleToken.Receiver}>(storagePath)
+              signer.capabilities.publish(receiverCap, at: receiverPath)
             }
           }
         }
@@ -58,13 +62,15 @@ export class FlowService {
 
         transaction {
           prepare(signer: auth(Storage, Capabilities) &Account) {
-            if signer.storage.borrow<&CivicNFT.Collection>(from: CivicNFT.CollectionStoragePath) != nil {
+            let storagePath = /storage/CivicNFTCollection
+            let publicPath = /public/CivicNFTCollection
+            if signer.storage.borrow<&CivicNFT.Collection>(from: storagePath) != nil {
               return
             }
             let collection <- CivicNFT.createEmptyCollection(nftType: Type<@CivicNFT.NFT>())
-            signer.storage.save(<-collection, to: CivicNFT.CollectionStoragePath)
-            let collectionCap = signer.capabilities.storage.issue<&CivicNFT.Collection>(CivicNFT.CollectionStoragePath)
-            signer.capabilities.publish(collectionCap, at: CivicNFT.CollectionPublicPath)
+            signer.storage.save(<-collection, to: storagePath)
+            let collectionCap = signer.capabilities.storage.issue<&CivicNFT.Collection>(storagePath)
+            signer.capabilities.publish(collectionCap, at: publicPath)
           }
         }
       `,
@@ -140,6 +146,7 @@ export class FlowService {
           prepare(signer: auth(Storage) &Account) {
             NDAOToken.claimTokens(amount: amount, recipient: signer.address)
           }
+          execute {}
         }
       `,
       args: (arg: any, t: any) => [arg(amount.toFixed(1), t.UFix64)],
@@ -168,6 +175,41 @@ export class FlowService {
     return txId;
   }
 
+  // ── Token suggestion: prompts wallet to add NDAO ─────────────────────────
+
+  // Calls FCL's wallet-level token suggestion so the connected wallet shows
+  // a popup asking the user to add the NDAO token.
+  static async suggestNDAOToken(): Promise<void> {
+    // FCL 1.x exposes this via fcl.experimental.suggestFCLTokens or
+    // directly as fcl.suggestFCLTokens depending on wallet version.
+    // We use the standard FT metadata approach — issue a mutate tx that
+    // calls setupNDAOVault (idempotent) which causes the wallet to
+    // recognise the token via FTDisplay metadata on the contract.
+    // Additionally trigger the wallet's native token-add flow via window.fcl.
+    const suggestFn =
+      (fcl as any).suggestFCLTokens ??
+      (fcl as any).experimental?.suggestFCLTokens;
+
+    if (typeof suggestFn === 'function') {
+      await suggestFn({
+        tokens: [
+          {
+            contractName: 'NDAOToken',
+            contractAddress: CONTRACTS,
+            storagePath: '/storage/NDAOVault',
+            publicPath: '/public/NDAOVault',
+            receiverPath: '/public/NDAOReceiver',
+            vaultType: `A.${CONTRACTS.replace('0x', '')}.NDAOToken.Vault`,
+          },
+        ],
+      });
+    } else {
+      // Fallback: run SetupNDAOVault so the vault is registered on-chain,
+      // then the wallet will detect it via FTDisplay metadata automatically.
+      await FlowService.setupNDAOVault();
+    }
+  }
+
   // ── Queries ───────────────────────────────────────────────────────────────
 
   static async getProposalVotes(proposalId: string): Promise<any> {
@@ -193,7 +235,7 @@ export class FlowService {
 
           access(all) fun main(address: Address): UFix64 {
             let vaultRef = getAccount(address)
-              .capabilities.get<&NDAOToken.Vault>(NDAOToken.VaultPublicPath)
+              .capabilities.get<&NDAOToken.Vault>(/public/NDAOTokenVault)
               .borrow()
             return vaultRef?.balance ?? 0.0
           }
