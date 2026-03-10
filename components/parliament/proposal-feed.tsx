@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Box, VStack, HStack, Text, Badge, Spinner, Select, IconButton, Tooltip,
 } from '@chakra-ui/react';
@@ -17,27 +17,31 @@ const STATUS_COLORS: Record<string, string> = {
   Rejected: 'red',
 };
 
-export function ProposalFeed() {
+export interface ProposalFeedHandle {
+  refresh: () => void;
+}
+
+export const ProposalFeed = forwardRef<ProposalFeedHandle>(function ProposalFeed(_props, ref) {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('All');
 
   const isMounted = useRef(true);
 
-  useEffect(() => {
-    isMounted.current = true;
+  const fetchProposals = () => {
     ProposalService.getProposals()
       .then((data) => { if (isMounted.current) setProposals(data); })
       .catch((e) => console.error('Failed to fetch proposals', e))
       .finally(() => { if (isMounted.current) setLoading(false); });
+  };
+
+  useImperativeHandle(ref, () => ({ refresh: fetchProposals }));
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchProposals();
     return () => { isMounted.current = false; };
   }, []);
-
-  const fetchProposals = () => {
-    ProposalService.getProposals()
-      .then((data) => setProposals(data))
-      .catch((e) => console.error('Failed to fetch proposals', e));
-  };
 
   const filtered = filter === 'All'
     ? proposals
@@ -189,4 +193,4 @@ export function ProposalFeed() {
       )}
     </VStack>
   );
-}
+});

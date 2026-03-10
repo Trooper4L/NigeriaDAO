@@ -15,11 +15,26 @@ access(all) contract CivicNFT: NonFungibleToken {
     access(all) let CollectionPublicPath: PublicPath
     access(all) let MinterStoragePath: StoragePath
 
+    // Returns the hosted image URL for a given badge type
+    access(all) view fun badgeImageURL(_ badgeType: String): String {
+        switch badgeType {
+            case "participation":
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-participation.svg"
+            case "governance":
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-governance.svg"
+            case "contribution":
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-contribution.svg"
+            default:
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-civic.svg"
+        }
+    }
+
     access(all) resource NFT: NonFungibleToken.NFT {
         access(all) let id: UInt64
         access(all) let badgeType: String
         access(all) let name: String
         access(all) let description: String
+        access(all) let imageURL: String
         access(all) let soulbound: Bool
         access(all) let mintedAt: UFix64
 
@@ -28,20 +43,21 @@ access(all) contract CivicNFT: NonFungibleToken {
             self.badgeType = badgeType
             self.soulbound = soulbound
             self.mintedAt = getCurrentBlock().timestamp
+            self.imageURL = CivicNFT.badgeImageURL(badgeType)
 
             switch badgeType {
                 case "participation":
                     self.name = "Civic Participation Badge"
-                    self.description = "Awarded for active civic engagement"
+                    self.description = "Awarded to NigeriaDAO members for active civic engagement — voting on proposals and participating in governance."
                 case "governance":
                     self.name = "Governance Contributor Badge"
-                    self.description = "Awarded for governance participation"
+                    self.description = "Awarded to NigeriaDAO members who have created civic proposals and driven governance participation."
                 case "contribution":
                     self.name = "Outstanding Contribution Badge"
-                    self.description = "Awarded for exceptional civic contributions"
+                    self.description = "Awarded to NigeriaDAO members for exceptional civic contributions that shaped the community."
                 default:
                     self.name = "Civic Badge"
-                    self.description = "Civic engagement badge"
+                    self.description = "A NigeriaDAO civic engagement badge."
             }
         }
 
@@ -50,7 +66,15 @@ access(all) contract CivicNFT: NonFungibleToken {
         }
 
         access(all) view fun getViews(): [Type] {
-            return [Type<MetadataViews.Display>()]
+            return [
+                Type<MetadataViews.Display>(),
+                Type<MetadataViews.Editions>(),
+                Type<MetadataViews.ExternalURL>(),
+                Type<MetadataViews.NFTCollectionData>(),
+                Type<MetadataViews.NFTCollectionDisplay>(),
+                Type<MetadataViews.Serial>(),
+                Type<MetadataViews.Traits>()
+            ]
         }
 
         access(all) fun resolveView(_ view: Type): AnyStruct? {
@@ -59,8 +83,40 @@ access(all) contract CivicNFT: NonFungibleToken {
                     return MetadataViews.Display(
                         name: self.name,
                         description: self.description,
-                        thumbnail: MetadataViews.HTTPFile(url: "")
+                        thumbnail: MetadataViews.HTTPFile(url: self.imageURL)
                     )
+                case Type<MetadataViews.Serial>():
+                    return MetadataViews.Serial(self.id)
+                case Type<MetadataViews.Editions>():
+                    let editionInfo = MetadataViews.Edition(
+                        name: self.badgeType,
+                        number: self.id,
+                        max: nil
+                    )
+                    let editionList: [MetadataViews.Edition] = [editionInfo]
+                    return MetadataViews.Editions(editionList)
+                case Type<MetadataViews.ExternalURL>():
+                    return MetadataViews.ExternalURL("https://naijadao.vercel.app")
+                case Type<MetadataViews.NFTCollectionData>():
+                    return CivicNFT.resolveContractView(
+                        resourceType: Type<@CivicNFT.NFT>(),
+                        viewType: Type<MetadataViews.NFTCollectionData>()
+                    )
+                case Type<MetadataViews.NFTCollectionDisplay>():
+                    return CivicNFT.resolveContractView(
+                        resourceType: Type<@CivicNFT.NFT>(),
+                        viewType: Type<MetadataViews.NFTCollectionDisplay>()
+                    )
+                case Type<MetadataViews.Traits>():
+                    let traitsView = MetadataViews.dictToTraits(
+                        dict: {
+                            "badgeType": self.badgeType,
+                            "soulbound": self.soulbound ? "true" : "false",
+                            "mintedAt": self.mintedAt.toString()
+                        },
+                        excludedNames: nil
+                    )
+                    return traitsView
             }
             return nil
         }
@@ -139,7 +195,10 @@ access(all) contract CivicNFT: NonFungibleToken {
     }
 
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
-        return [Type<MetadataViews.NFTCollectionData>()]
+        return [
+            Type<MetadataViews.NFTCollectionData>(),
+            Type<MetadataViews.NFTCollectionDisplay>()
+        ]
     }
 
     access(all) fun resolveContractView(resourceType: Type?, viewType: Type): AnyStruct? {
@@ -154,25 +213,48 @@ access(all) contract CivicNFT: NonFungibleToken {
                         return <-CivicNFT.createEmptyCollection(nftType: Type<@CivicNFT.NFT>())
                     }
                 )
+            case Type<MetadataViews.NFTCollectionDisplay>():
+                let media = MetadataViews.Media(
+                    file: MetadataViews.HTTPFile(
+                        url: "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/civic-nft-banner.svg"
+                    ),
+                    mediaType: "image/svg+xml"
+                )
+                return MetadataViews.NFTCollectionDisplay(
+                    name: "NigeriaDAO Civic Badges",
+                    description: "Soulbound civic achievement badges awarded to NigeriaDAO members for governance participation, voting, and community contributions.",
+                    externalURL: MetadataViews.ExternalURL("https://naijadao.vercel.app"),
+                    squareImage: media,
+                    bannerImage: media,
+                    socials: {
+                        "twitter": MetadataViews.ExternalURL("https://twitter.com/NigeriaDAO")
+                    }
+                )
         }
         return nil
     }
 
+    // Public claim: anyone can call this to mint a badge into their own collection.
+    // The signer must already have a collection set up at CollectionPublicPath.
+    access(all) fun claimBadge(recipient: Address, badgeType: String): UInt64 {
+        let recipientCollection = getAccount(recipient)
+            .capabilities.get<&CivicNFT.Collection>(CivicNFT.CollectionPublicPath)
+            .borrow()
+            ?? panic("Could not borrow collection: run SetupCivicNFTCollection transaction first")
+
+        let nft <- create NFT(id: CivicNFT.totalSupply, badgeType: badgeType, soulbound: true)
+        let nftID = nft.id
+
+        recipientCollection.deposit(token: <-nft)
+        CivicNFT.totalSupply = CivicNFT.totalSupply + 1
+
+        emit BadgeMinted(id: nftID, badgeType: badgeType, recipient: recipient)
+        return nftID
+    }
+
     access(all) resource Minter {
         access(all) fun mintBadge(recipient: Address, badgeType: String, soulbound: Bool): UInt64 {
-            let recipientCollection = getAccount(recipient)
-                .capabilities.get<&CivicNFT.Collection>(CivicNFT.CollectionPublicPath)
-                .borrow()
-                ?? panic("Could not borrow collection reference")
-
-            let nft <- create NFT(id: CivicNFT.totalSupply, badgeType: badgeType, soulbound: soulbound)
-            let nftID = nft.id
-
-            recipientCollection.deposit(token: <-nft)
-            CivicNFT.totalSupply = CivicNFT.totalSupply + 1
-
-            emit BadgeMinted(id: nftID, badgeType: badgeType, recipient: recipient)
-            return nftID
+            return CivicNFT.claimBadge(recipient: recipient, badgeType: badgeType)
         }
     }
 

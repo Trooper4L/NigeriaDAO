@@ -26,28 +26,15 @@ export function VoteButton({ proposalId, proposalFirestoreId, onVoteSuccess }: V
       try {
         await signInAnonymous();
       } catch (error) {
-        toast({
-          title: 'Authentication failed',
-          description: 'Please try again',
-          status: 'error',
-          duration: 3000,
-        });
+        toast({ title: 'Authentication failed', description: 'Please try again', status: 'error', duration: 3000 });
         return;
       }
     }
 
     if (!isConnected) {
-      try {
-        await connect();
-      } catch (error) {
-        toast({
-          title: 'Flow wallet connection failed',
-          description: 'Please connect your Flow wallet to vote',
-          status: 'error',
-          duration: 3000,
-        });
-        return;
-      }
+      toast({ title: 'Flow wallet required', description: 'Please connect your Flow wallet before voting', status: 'warning', duration: 4000 });
+      try { await connect(); } catch { return; }
+      if (!isConnected) return;
     }
 
     setIsVoting(true);
@@ -55,61 +42,46 @@ export function VoteButton({ proposalId, proposalFirestoreId, onVoteSuccess }: V
     try {
       const voteResult = await ProposalService.castVote(proposalId, choice, user?.uid || 'anonymous');
 
-      toast({
-        title: 'Vote recorded',
-        description: `Your ${choice} vote has been submitted`,
-        status: 'success',
-        duration: 3000,
-      });
+      toast({ title: 'Vote recorded', description: `Your ${choice} vote has been submitted`, status: 'success', duration: 3000 });
 
-      if (isConnected) {
-        try {
-          const voteTxId = await FlowService.castVote(proposalId, choice);
-          await FlowService.mintCivicNFT(user?.uid || '', 'participation');
-          toast({
-            title: '+10 NDAO • Participation Badge',
-            description: 'Civic participation badge minted on Flow',
-            status: 'info',
-            duration: 4000,
-          });
-          if (voteTxId) {
-            if (voteResult?.firestoreId) {
-              api.patch(`/api/votes/${voteResult.firestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
-            }
-            if (proposalFirestoreId) {
-              api.patch(`/api/proposals/${proposalFirestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
+      try {
+        const voteTxId = await FlowService.castVote(proposalId, choice);
+        if (voteTxId) {
+          if (voteResult?.firestoreId) {
+            api.patch(`/api/votes/${voteResult.firestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
+          }
+          if (proposalFirestoreId) {
+            api.patch(`/api/proposals/${proposalFirestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
+          }
+        }
+      } catch (flowErr) {
+        console.warn('Flow castVote failed:', flowErr);
+      }
+
+      try {
+        await FlowService.setupNDAOVault();
+        await FlowService.setupCivicNFTCollection();
+        await FlowService.claimNDAOTokens(10);
+        await FlowService.mintCivicNFT(user?.uid || '', 'participation');
+        toast({ title: '+10 NDAO earned • Participation Badge minted', description: 'Check your Flow wallet', status: 'info', duration: 4000 });
+      } catch (mintErr) {
+        console.warn('Flow mint failed:', mintErr);
+      }
+
+      api.post<{ resolved: { id: string; newStatus: string; author?: string }[] }>('/api/resolve', {})
+        .then(async ({ resolved }) => {
+          for (const r of resolved) {
+            if (r.newStatus === 'Accepted' && r.author) {
+              FlowService.mintCivicNFT(r.author, 'contribution').catch(() => {});
             }
           }
-        } catch (_) {
-        }
-      }
+        })
+        .catch(() => {});
 
-      if (isConnected) {
-        api.post<{ resolved: { id: string; newStatus: string; author?: string }[] }>('/api/resolve', {})
-          .then(async ({ resolved }) => {
-            for (const r of resolved) {
-              if (r.newStatus === 'Accepted' && r.author) {
-                try {
-                  await FlowService.mintCivicNFT(r.author, 'contribution');
-                } catch (_) {}
-              }
-            }
-          })
-          .catch(() => {});
-      } else {
-        api.post('/api/resolve', {}).catch(() => {});
-      }
+      if (onVoteSuccess) onVoteSuccess();
 
-      if (onVoteSuccess) {
-        onVoteSuccess();
-      }
     } catch (error) {
-      toast({
-        title: 'Vote failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Vote failed', description: error instanceof Error ? error.message : 'Unknown error', status: 'error', duration: 5000 });
     } finally {
       setIsVoting(false);
     }

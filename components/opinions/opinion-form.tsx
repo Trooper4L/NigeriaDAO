@@ -92,17 +92,30 @@ export function OpinionForm({ onPosted }: OpinionFormProps = {}) {
 
       if (isConnected && opinion?.cid) {
         try {
-          const flowTxId = await FlowService.storeOpinionHash(opinion.cid, JSON.stringify({ author: user?.uid, content: content.slice(0, 100) }));
-          toast({
-            title: 'Opinion registered on Flow',
-            description: `CID anchored on-chain: ${opinion.cid.slice(0, 14)}…`,
-            status: 'info',
-            duration: 4000,
-          });
+          const flowTxId = await FlowService.storeOpinionHash(
+            opinion.cid,
+            JSON.stringify({ author: user?.uid, content: content.slice(0, 100) })
+          );
           if (flowTxId && opinion.firestoreId) {
             api.patch(`/api/opinions/${opinion.firestoreId}/flowHash`, { flowHash: flowTxId }).catch(() => {});
           }
-        } catch (_) {}
+        } catch (flowErr) {
+          console.warn('Flow storeOpinionHash failed:', flowErr);
+        }
+        try {
+          await FlowService.setupNDAOVault();
+          await FlowService.claimNDAOTokens(5);
+          toast({
+            title: '+5 NDAO earned',
+            description: 'Tokens deposited to your Flow wallet',
+            status: 'info',
+            duration: 4000,
+          });
+        } catch (mintErr) {
+          console.warn('Flow mint NDAO failed:', mintErr);
+        }
+      } else if (!isConnected) {
+        toast({ title: 'Flow wallet not connected', description: 'Connect your Flow wallet to earn NDAO tokens', status: 'warning', duration: 4000 });
       }
 
       setContent('');

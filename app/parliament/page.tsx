@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   Box, Button, FormControl, FormLabel, Grid, Heading,
   HStack, Icon, Input, Select, Stack, Text, Textarea, useToast,
 } from "@chakra-ui/react";
-import { ProposalFeed } from "@/components/parliament/proposal-feed";
+import { ProposalFeed, ProposalFeedHandle } from "@/components/parliament/proposal-feed";
 import { ProposalService } from "@/lib/services/proposal";
 import { FlowService } from "@/lib/services/flow";
 import { api } from "@/lib/api/client";
@@ -26,7 +26,7 @@ export default function ParliamentPage() {
   const { user, isAuthenticated, signInAnonymous } = useAuth();
   const { isConnected } = useFlow();
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const feedRef = useRef<ProposalFeedHandle>(null);
   const [form, setForm] = useState({
     title: "",
     summary: "",
@@ -60,24 +60,35 @@ export default function ParliamentPage() {
       );
       toast({ status: "success", description: "Proposal submitted and open for voting." });
 
-      if (isConnected) {
+      if (!isConnected) {
+        toast({ title: 'Flow wallet not connected', description: 'Connect your Flow wallet to register proposals on-chain', status: 'warning', duration: 4000 });
+      } else {
         try {
           const flowTxId = await FlowService.storeProposalHash(
             proposal.cid || '',
             proposal.title,
             JSON.stringify({ author: user?.uid, category: form.category, region: form.state })
           );
-          await FlowService.mintCivicNFT(user?.uid || '', 'governance');
-          toast({ title: '+25 NDAO • Governance Badge', description: 'Governance contributor badge minted on Flow', status: 'info', duration: 4000 });
           if (flowTxId && proposal.firestoreId) {
             api.patch(`/api/proposals/${proposal.firestoreId}/flowHash`, { flowHash: flowTxId }).catch(() => {});
           }
-        } catch (_) {}
+        } catch (flowErr) {
+          console.warn('Flow storeProposalHash failed:', flowErr);
+        }
+        try {
+          await FlowService.setupNDAOVault();
+          await FlowService.setupCivicNFTCollection();
+          await FlowService.claimNDAOTokens(25);
+          await FlowService.mintCivicNFT(user?.uid || '', 'governance');
+          toast({ title: '+25 NDAO earned • Governance Badge minted', description: 'Check your Flow wallet', status: 'info', duration: 4000 });
+        } catch (mintErr) {
+          console.warn('Flow mint failed:', mintErr);
+        }
       }
 
       api.post('/api/resolve', {}).catch(() => {});
       setForm({ title: "", summary: "", description: "", state: "FCT", category: "" });
-      setRefreshKey((k) => k + 1);
+      feedRef.current?.refresh();
     } catch (e: any) {
       toast({ status: "error", description: e.message || "Failed to create proposal." });
     } finally {
@@ -194,7 +205,7 @@ export default function ParliamentPage() {
 
         <Stack spacing={4}>
           <Heading size="md">Proposal Feed</Heading>
-          <ProposalFeed key={refreshKey} />
+          <ProposalFeed ref={feedRef} />
         </Stack>
       </Grid>
     </Box>

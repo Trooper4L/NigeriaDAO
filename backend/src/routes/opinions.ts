@@ -44,20 +44,31 @@ router.post('/', async (req: Request, res: Response) => {
       upvotes: 0, downvotes: 0, comments: 0,
     };
 
-    const json = JSON.stringify(opinionData, null, 2);
-    const cid = await synapseUpload(json);
-
     const opinion = {
       id: `OP-${Date.now()}`,
       ...opinionData,
-      cid,
+      cid: '',
       flowHash: '',
-      filecoinDealUrl: `https://calibration.filscan.io/tipset/message-detail?cid=${cid}`,
-      gatewayUrl: `https://gateway.calibration.node.glif.io/ipfs/${cid}`,
+      filecoinDealUrl: '',
+      gatewayUrl: '',
     };
 
     const docRef = await db.collection('opinions').add(opinion);
-    res.status(201).json({ firestoreId: docRef.id, ...opinion });
+    const firestoreId = docRef.id;
+
+    res.status(201).json({ firestoreId, ...opinion });
+
+    const json = JSON.stringify(opinionData, null, 2);
+    synapseUpload(json)
+      .then((cid) => {
+        docRef.update({
+          cid,
+          filecoinDealUrl: `https://calibration.filscan.io/tipset/message-detail?cid=${cid}`,
+          gatewayUrl: `https://gateway.calibration.node.glif.io/ipfs/${cid}`,
+        }).catch((e) => console.error('[Opinions] Failed to patch CID:', e.message));
+      })
+      .catch((e) => console.error('[Synapse] Background upload failed:', e.message));
+
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

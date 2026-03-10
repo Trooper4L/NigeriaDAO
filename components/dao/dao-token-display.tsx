@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Box, HStack, VStack, Text, Badge, Spinner } from '@chakra-ui/react';
-import { Coins, Award } from 'lucide-react';
-import { DAOService } from '@/lib/services/dao';
+import { useCallback, useEffect, useState } from 'react';
+import { Box, HStack, VStack, Text, Badge, Spinner, IconButton } from '@chakra-ui/react';
+import { Coins, Award, RefreshCw } from 'lucide-react';
+import { FlowService } from '@/lib/services/flow';
 import { useFlow } from '@/lib/hooks/useFlow';
 import { DAOToken } from '@/lib/types';
 
@@ -12,25 +12,26 @@ export function DAOTokenDisplay() {
   const [tokenData, setTokenData] = useState<DAOToken | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isConnected && address) {
-      loadTokenData();
-    }
-  }, [isConnected, address]);
-
-  const loadTokenData = async () => {
+  const loadTokenData = useCallback(async () => {
     if (!address) return;
-
     setLoading(true);
     try {
-      const data = await DAOService.getTokenBalance(address);
-      setTokenData(data);
+      const balance = await FlowService.getDAOTokenBalance(address);
+      setTokenData({ balance, staked: 0, votingPower: balance });
     } catch (error) {
       console.error('Failed to load token data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [address]);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      loadTokenData();
+      const interval = setInterval(loadTokenData, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [isConnected, address, loadTokenData]);
 
   if (!isConnected) {
     return (
@@ -70,11 +71,23 @@ export function DAOTokenDisplay() {
       p={5}
     >
       <VStack spacing={4} align="stretch">
-        <HStack spacing={2}>
-          <Coins size={20} color="#00EF8B" />
-          <Text fontSize="lg" fontWeight="600" color="#00EF8B">
-            NDAO Governance Tokens
-          </Text>
+        <HStack spacing={2} justify="space-between">
+          <HStack spacing={2}>
+            <Coins size={20} color="#00EF8B" />
+            <Text fontSize="lg" fontWeight="600" color="#00EF8B">
+              NDAO Governance Tokens
+            </Text>
+          </HStack>
+          <IconButton
+            aria-label="Refresh balance"
+            icon={<RefreshCw size={14} />}
+            size="xs"
+            variant="ghost"
+            color="gray.400"
+            _hover={{ color: '#00EF8B' }}
+            onClick={loadTokenData}
+            isLoading={loading}
+          />
         </HStack>
 
         <HStack justify="space-between">

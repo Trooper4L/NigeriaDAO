@@ -10,8 +10,13 @@ router.get('/balance/:address', async (req: Request, res: Response) => {
     const balance = await fcl.query({
       cadence: `
         import NDAOToken from ${CONTRACT_ADDRESS}
+        import FungibleToken from 0x9a0766d93b6608b7
+
         access(all) fun main(address: Address): UFix64 {
-          return NDAOToken.getBalance(address: address)
+          let vaultRef = getAccount(address)
+            .capabilities.get<&NDAOToken.Vault>(NDAOToken.VaultPublicPath)
+            .borrow()
+          return vaultRef?.balance ?? 0.0
         }
       `,
       args: (arg: any, t: any) => [arg(address, t.Address)],

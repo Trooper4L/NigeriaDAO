@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#008751;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00EF8B;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#shine)"/>
+  <circle cx="100" cy="100" r="85" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity="0.4"/>
+  <text x="100" y="78" font-family="Arial Black, sans-serif" font-size="38" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">N</text>
+  <text x="100" y="115" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="3">NDAO</text>
+  <text x="100" y="140" font-family="Arial, sans-serif" font-size="10" font-weight="400" fill="#ffffff" text-anchor="middle" opacity="0.8">GOVERNANCE TOKEN</text>
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#00EF8B" stroke-width="1" stroke-opacity="0.5"/>
+</svg>
