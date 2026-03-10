@@ -19,13 +19,13 @@ access(all) contract CivicNFT: NonFungibleToken {
     access(all) view fun badgeImageURL(_ badgeType: String): String {
         switch badgeType {
             case "participation":
-                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-participation.svg"
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-participation.png"
             case "governance":
-                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-governance.svg"
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-governance.png"
             case "contribution":
-                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-contribution.svg"
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-contribution.png"
             default:
-                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-civic.svg"
+                return "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-civic.png"
         }
     }
 
@@ -216,9 +216,9 @@ access(all) contract CivicNFT: NonFungibleToken {
             case Type<MetadataViews.NFTCollectionDisplay>():
                 let media = MetadataViews.Media(
                     file: MetadataViews.HTTPFile(
-                        url: "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/civic-nft-banner.svg"
+                        url: "https://raw.githubusercontent.com/Tropixone/NigeriaDAO/main/public/badge-civic.png"
                     ),
-                    mediaType: "image/svg+xml"
+                    mediaType: "image/png"
                 )
                 return MetadataViews.NFTCollectionDisplay(
                     name: "NigeriaDAO Civic Badges",
