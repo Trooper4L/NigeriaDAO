@@ -25,8 +25,8 @@ export class ProposalService {
     await api.patch(`/api/proposals/${firestoreId}/status`, { status: newStatus });
   }
 
-  static async castVote(proposalId: string, choice: 'support' | 'against', voter: string): Promise<void> {
-    await api.post('/api/votes', { proposalId, voter, choice });
+  static async castVote(proposalId: string, choice: 'support' | 'against', voter: string): Promise<{ firestoreId: string }> {
+    return api.post<{ firestoreId: string }>('/api/votes', { proposalId, voter, choice });
   }
 
   static async getProposalVotes(proposalId: string): Promise<{ support: number; against: number }> {

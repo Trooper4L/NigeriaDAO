@@ -63,6 +63,17 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+router.patch('/:id/flowHash', async (req: Request, res: Response) => {
+  try {
+    const { flowHash } = req.body;
+    if (!flowHash) return res.status(400).json({ error: 'flowHash is required' });
+    await db.collection('opinions').doc(req.params.id).update({ flowHash });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch('/:id/vote', async (req: Request, res: Response) => {
   try {
     const { type } = req.body;

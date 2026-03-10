@@ -92,13 +92,16 @@ export function OpinionForm({ onPosted }: OpinionFormProps = {}) {
 
       if (isConnected && opinion?.cid) {
         try {
-          await FlowService.storeOpinionHash(opinion.cid, JSON.stringify({ author: user?.uid, content: content.slice(0, 100) }));
+          const flowTxId = await FlowService.storeOpinionHash(opinion.cid, JSON.stringify({ author: user?.uid, content: content.slice(0, 100) }));
           toast({
             title: 'Opinion registered on Flow',
             description: `CID anchored on-chain: ${opinion.cid.slice(0, 14)}…`,
             status: 'info',
             duration: 4000,
           });
+          if (flowTxId && opinion.firestoreId) {
+            api.patch(`/api/opinions/${opinion.firestoreId}/flowHash`, { flowHash: flowTxId }).catch(() => {});
+          }
         } catch (_) {}
       }
 

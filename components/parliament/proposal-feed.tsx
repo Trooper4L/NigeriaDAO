@@ -134,6 +134,7 @@ export function ProposalFeed() {
               {proposal.status === 'Voting' && (
                 <VoteButton
                   proposalId={proposal.firestoreId || proposal.id}
+                  proposalFirestoreId={proposal.firestoreId}
                   onVoteSuccess={fetchProposals}
                 />
               )}

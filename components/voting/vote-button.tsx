@@ -11,10 +11,11 @@ import { useFlow } from '@/lib/hooks/useFlow';
 
 interface VoteButtonProps {
   proposalId: string;
+  proposalFirestoreId?: string;
   onVoteSuccess?: () => void;
 }
 
-export function VoteButton({ proposalId, onVoteSuccess }: VoteButtonProps) {
+export function VoteButton({ proposalId, proposalFirestoreId, onVoteSuccess }: VoteButtonProps) {
   const [isVoting, setIsVoting] = useState(false);
   const { user, isAuthenticated, signInAnonymous } = useAuth();
   const { isConnected, connect } = useFlow();
@@ -52,7 +53,7 @@ export function VoteButton({ proposalId, onVoteSuccess }: VoteButtonProps) {
     setIsVoting(true);
 
     try {
-      await ProposalService.castVote(proposalId, choice, user?.uid || 'anonymous');
+      const voteResult = await ProposalService.castVote(proposalId, choice, user?.uid || 'anonymous');
 
       toast({
         title: 'Vote recorded',
@@ -63,7 +64,7 @@ export function VoteButton({ proposalId, onVoteSuccess }: VoteButtonProps) {
 
       if (isConnected) {
         try {
-          await FlowService.castVote(proposalId, choice);
+          const voteTxId = await FlowService.castVote(proposalId, choice);
           await FlowService.mintCivicNFT(user?.uid || '', 'participation');
           toast({
             title: '+10 NDAO • Participation Badge',
@@ -71,6 +72,14 @@ export function VoteButton({ proposalId, onVoteSuccess }: VoteButtonProps) {
             status: 'info',
             duration: 4000,
           });
+          if (voteTxId) {
+            if (voteResult?.firestoreId) {
+              api.patch(`/api/votes/${voteResult.firestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
+            }
+            if (proposalFirestoreId) {
+              api.patch(`/api/proposals/${proposalFirestoreId}/flowHash`, { flowHash: voteTxId }).catch(() => {});
+            }
+          }
         } catch (_) {
         }
       }

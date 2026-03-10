@@ -62,6 +62,17 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+router.patch('/:firestoreId/flowHash', async (req: Request, res: Response) => {
+  try {
+    const { flowHash } = req.body;
+    if (!flowHash) return res.status(400).json({ error: 'flowHash is required' });
+    await db.collection('proposals').doc(req.params.firestoreId).update({ flowHash });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch('/:firestoreId/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;

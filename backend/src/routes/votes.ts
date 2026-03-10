@@ -51,6 +51,17 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+router.patch('/:id/flowHash', async (req: Request, res: Response) => {
+  try {
+    const { flowHash } = req.body;
+    if (!flowHash) return res.status(400).json({ error: 'flowHash is required' });
+    await db.collection('votes').doc(req.params.id).update({ txHash: flowHash });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/proposal/:proposalId', async (req: Request, res: Response) => {
   try {
     const snapshot = await db.collection('votes')

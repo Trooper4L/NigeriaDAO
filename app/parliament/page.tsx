@@ -50,7 +50,7 @@ export default function ParliamentPage() {
 
     setLoading(true);
     try {
-      await ProposalService.createProposal(
+      const proposal = await ProposalService.createProposal(
         form.title,
         form.summary,
         form.description,
@@ -62,8 +62,16 @@ export default function ParliamentPage() {
 
       if (isConnected) {
         try {
+          const flowTxId = await FlowService.storeProposalHash(
+            proposal.cid || '',
+            proposal.title,
+            JSON.stringify({ author: user?.uid, category: form.category, region: form.state })
+          );
           await FlowService.mintCivicNFT(user?.uid || '', 'governance');
           toast({ title: '+25 NDAO • Governance Badge', description: 'Governance contributor badge minted on Flow', status: 'info', duration: 4000 });
+          if (flowTxId && proposal.firestoreId) {
+            api.patch(`/api/proposals/${proposal.firestoreId}/flowHash`, { flowHash: flowTxId }).catch(() => {});
+          }
         } catch (_) {}
       }
 
