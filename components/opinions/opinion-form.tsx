@@ -8,6 +8,7 @@ import { FlowService } from '@/lib/services/flow';
 import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFlow } from '@/lib/hooks/useFlow';
+import { useFlowRewards } from '@/lib/hooks/useFlowRewards';
 
 interface OpinionFormProps {
   onPosted?: () => void;
@@ -19,6 +20,7 @@ export function OpinionForm({ onPosted }: OpinionFormProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, isAuthenticated, signInAnonymous } = useAuth();
   const { isConnected } = useFlow();
+  const { grantRewards } = useFlowRewards();
   const toast = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,11 +105,10 @@ export function OpinionForm({ onPosted }: OpinionFormProps = {}) {
           console.warn('Flow storeOpinionHash failed:', flowErr);
         }
         try {
-          await FlowService.setupNDAOVault();
-          await FlowService.claimNDAOTokens(5);
+          await grantRewards(5, 'civic', user?.uid || '');
           toast({
-            title: '+5 NDAO earned',
-            description: 'Tokens deposited to your Flow wallet',
+            title: '+5 NDAO earned • Civic Badge minted',
+            description: 'Check your Flow wallet',
             status: 'info',
             duration: 4000,
           });

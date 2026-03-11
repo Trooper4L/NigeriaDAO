@@ -175,6 +175,28 @@ export class FlowService {
     return txId;
   }
 
+  // Combines claimNDAOTokens + mintCivicNFT into a single transaction = 1 wallet popup.
+  // Both vault and collection must already be set up before calling this.
+  static async claimRewards(amount: number, badgeType: string): Promise<string> {
+    const txId = await fcl.mutate({
+      cadence: `
+        import NDAOToken from ${CONTRACTS}
+        import CivicNFT from ${CONTRACTS}
+
+        transaction(amount: UFix64, badgeType: String) {
+          prepare(signer: auth(Storage) &Account) {
+            NDAOToken.claimTokens(amount: amount, recipient: signer.address)
+            CivicNFT.claimBadge(recipient: signer.address, badgeType: badgeType)
+          }
+          execute {}
+        }
+      `,
+      args: (arg: any, t: any) => [arg(amount.toFixed(1), t.UFix64), arg(badgeType, t.String)],
+      limit: 300,
+    });
+    return txId;
+  }
+
   // ── Token suggestion: prompts wallet to add NDAO ─────────────────────────
 
   // Calls FCL's wallet-level token suggestion so the connected wallet shows

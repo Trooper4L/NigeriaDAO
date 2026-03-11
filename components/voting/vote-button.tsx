@@ -8,6 +8,7 @@ import { FlowService } from '@/lib/services/flow';
 import { api } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFlow } from '@/lib/hooks/useFlow';
+import { useFlowRewards } from '@/lib/hooks/useFlowRewards';
 
 interface VoteButtonProps {
   proposalId: string;
@@ -19,6 +20,7 @@ export function VoteButton({ proposalId, proposalFirestoreId, onVoteSuccess }: V
   const [isVoting, setIsVoting] = useState(false);
   const { user, isAuthenticated, signInAnonymous } = useAuth();
   const { isConnected, connect } = useFlow();
+  const { grantRewards } = useFlowRewards();
   const toast = useToast();
 
   const handleVote = async (choice: 'support' | 'against') => {
@@ -59,10 +61,7 @@ export function VoteButton({ proposalId, proposalFirestoreId, onVoteSuccess }: V
       }
 
       try {
-        await FlowService.setupNDAOVault();
-        await FlowService.setupCivicNFTCollection();
-        await FlowService.claimNDAOTokens(10);
-        await FlowService.mintCivicNFT(user?.uid || '', 'participation');
+        await grantRewards(10, 'participation', user?.uid || '');
         toast({ title: '+10 NDAO earned • Participation Badge minted', description: 'Check your Flow wallet', status: 'info', duration: 4000 });
       } catch (mintErr) {
         console.warn('Flow mint failed:', mintErr);

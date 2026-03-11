@@ -12,6 +12,7 @@ import { FlowService } from "@/lib/services/flow";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useFlow } from "@/lib/hooks/useFlow";
+import { useFlowRewards } from "@/lib/hooks/useFlowRewards";
 
 const NIGERIAN_STATES = [
   "FCT", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
@@ -25,6 +26,7 @@ export default function ParliamentPage() {
   const toast = useToast();
   const { user, isAuthenticated, signInAnonymous } = useAuth();
   const { isConnected } = useFlow();
+  const { grantRewards } = useFlowRewards();
   const [loading, setLoading] = useState(false);
   const feedRef = useRef<ProposalFeedHandle>(null);
   const [form, setForm] = useState({
@@ -76,10 +78,7 @@ export default function ParliamentPage() {
           console.warn('Flow storeProposalHash failed:', flowErr);
         }
         try {
-          await FlowService.setupNDAOVault();
-          await FlowService.setupCivicNFTCollection();
-          await FlowService.claimNDAOTokens(25);
-          await FlowService.mintCivicNFT(user?.uid || '', 'governance');
+          await grantRewards(25, 'governance', user?.uid || '');
           toast({ title: '+25 NDAO earned • Governance Badge minted', description: 'Check your Flow wallet', status: 'info', duration: 4000 });
         } catch (mintErr) {
           console.warn('Flow mint failed:', mintErr);
