@@ -49,7 +49,7 @@ Build a secure, mobile-first civic portal that bridges:
 
 **Integrated Services:**
 - ✅ **Flow FCL** - Blockchain wallet and transaction interactions
-- ✅ **Lighthouse SDK** - IPFS/Filecoin decentralized storage
+- ✅ **Synapse SDK** - IPFS/Filecoin decentralized storage
 - ✅ **Firebase** - Anonymous authentication + Firestore database
 - ✅ **Cadence Smart Contracts** - On-chain governance and voting
 
@@ -98,7 +98,7 @@ lib/
     flow.ts
   services/
     auth.ts
-    lighthouse.ts
+    synapse.ts
     flow.ts
     opinion.ts
     proposal.ts
@@ -138,7 +138,7 @@ cp .env.example .env.local
 
 Required credentials:
 - **Firebase** - Create project at [Firebase Console](https://console.firebase.google.com/)
-- **Lighthouse** - Get API key at [Lighthouse Storage](https://files.lighthouse.storage/)
+- **Synapse** - Filecoin Synapse SDK for decentralized storage
 - **Flow** - Testnet configuration (pre-configured)
 
 See [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) for detailed setup instructions.
